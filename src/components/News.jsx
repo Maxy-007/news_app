@@ -1,88 +1,80 @@
-import React, { Component } from 'react'
+import React, { useEffect, useState } from 'react'
 import NewsItem from './NewsItem'
 import Spinner from './Spinner';
 import PropTypes from 'prop-types'
 import InfiniteScroll from "react-infinite-scroll-component";
 
+const News = (props) => {
 
-export class News extends Component {
+    const [articles, setArticles] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [page, setPage] = useState(1)
+    const [totalResults, setTotalResults] = useState(0)
 
-    static defaultProps = {
-        country: 'in',
-        pagesize: '6',
-        category: 'general'
-    };
-
-    static propTypes = {
-        country: PropTypes.string,
-        pagesize: PropTypes.number,
-        category: PropTypes.string,
-    };
-
-    capitalizeFirstLetter = (string) => {
+    const capitalizeFirstLetter = (string) => {
         return string.charAt(0).toUpperCase() + string.slice(1);
     }
 
-    constructor(props) {
-        super(props);
-        this.state = {
-            articles: [],
-            loading: true,
-            page: 1,
-        }
-        document.title = `${this.capitalizeFirstLetter(this.props.category)} - InsighDigest`;
-    }
-
-    async updateNews() {
-        let url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=ebb9ec612bed41ea82745997ac49c594&page=${this.state.page}&pagesize=${this.props.pagesize}`;
-        this.setState({ loading: true });
+    const updateNews = async () => {
+        let url = `https://newsapi.org/v2/top-headlines?country=${props.country}&category=${props.category}&apiKey=${props.apiKey}&page=${page}&pagesize=${props.pagesize}`;
+        setLoading(true);
         let data = await fetch(url);
         let parsedData = await data.json();
-        this.setState({
-            articles: parsedData.articles,
-            totalResults: parsedData.totalResults,
-            loading: false
-        });
+
+        setArticles(parsedData.articles);
+        setTotalResults(parsedData.totalResults);
+        setLoading(false);
+
     }
 
-    async componentDidMount() {
-        this.updateNews();
-    }
-
-    fetchMoreData = async () => {
-        this.setState({ page: this.state.page + 1 })
-        let url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=ebb9ec612bed41ea82745997ac49c594&page=${this.state.page}&pagesize=${this.props.pagesize}`;
+    const fetchMoreData = async () => {
+        setPage(page + 1)
+        let url = `https://newsapi.org/v2/top-headlines?country=${props.country}&category=${props.category}&apiKey=${props.apiKey}&page=${page + 1}&pagesize=${props.pagesize}`;
         let data = await fetch(url);
         let parsedData = await data.json();
-        this.setState({
-            articles: this.state.articles.concat(parsedData.articles),
-            totalResults: parsedData.totalResults,
-        });
+        setArticles(articles.concat(parsedData.articles));
+        setTotalResults(parsedData.totalResults);
     };
 
-    render() {
-        return (
-            <div className='container my-4'>
-                <h1 className='mb-4 text-center' style={{ margin: '40px' }}>InsightDigest - Top {this.capitalizeFirstLetter(this.props.category)} Headlines</h1>
-                {this.state.loading && <Spinner />}
-                <InfiniteScroll
-                    dataLength={this.state.articles.length}
-                    next={this.fetchMoreData}
-                    hasMore={this.state.articles.length !== this.state.totalResults}
-                    loader={<Spinner />}
-                > <div className="container">
-                        <div className="my-3 row" style={{ display: "flex" }} >
-                            {!this.state.loading && this.state.articles.map((element => {
-                                return <div className="col-md-4 my-3" style={{ alignItems: "stretch" }} key={element.url}>
-                                    <NewsItem title={element.title ? element.title : " "} description={element.description ? element.description : " "} imgurl={element.urlToImage} newsurl={element.url} author={element.author} source={element.source.name} updatedtime={element.publishedAt} />
-                                </div>
-                            }))}
-                        </div>
+    useEffect(() => {
+        document.title = `${capitalizeFirstLetter(props.category)} - InsighDigest`;
+        updateNews();
+        // eslint-disable-next-line
+    }, [])
+
+    return (
+        <div className='container my-4'>
+            <h1 className='mb-4 text-center ' style={{ margin: '35px 0PX', marginTop: '90px' }}>InsightDigest - Top {capitalizeFirstLetter(props.category)} Headlines</h1>
+            {loading && <Spinner />}
+            <InfiniteScroll
+                dataLength={articles.length}
+                next={fetchMoreData}
+                hasMore={articles.length !== totalResults}
+                loader={<Spinner />}
+            > <div className="container">
+                    <div className="my-3 row" style={{ display: "flex" }} >
+                        {!loading && articles.map((element => {
+                            return <div className="col-md-4 my-3" style={{ alignItems: "stretch" }} key={element.url}>
+                                <NewsItem title={element.title ? element.title : " "} description={element.description ? element.description : " "} imgurl={element.urlToImage} newsurl={element.url} author={element.author} source={element.source.name} updatedtime={element.publishedAt} />
+                            </div>
+                        }))}
                     </div>
-                </InfiniteScroll>
-            </div>
-        )
-    }
+                </div>
+            </InfiniteScroll>
+        </div>
+    )
 }
 
 export default News
+
+News.defaultProps = {
+    country: 'in',
+    pagesize: '6',
+    category: 'general'
+};
+
+News.propTypes = {
+    country: PropTypes.string,
+    pagesize: PropTypes.number,
+    category: PropTypes.string,
+};
